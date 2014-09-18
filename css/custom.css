@@ -23,3 +23,7 @@ h1 {
 img, p, h2, h4 {
 	text-align: center;
 }
+
+.small-border {
+	border: #476B6B solid 2px; 
+}

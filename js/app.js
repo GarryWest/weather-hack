@@ -1,16 +1,3 @@
-$(document).ready( function() {
-	$('.weather-getter').submit( function(event){
-
-		// zero out results if previous search has run
-		$('.results').html('');
-		// get the value of the location the user submitted
-		var location = $(this).find("input[name='location']").val();
-		getWeather(location);
-	});
-	
-	getWeather("Chicago");
-});
-
 // takes error string and turns it into displayable DOM element
 /*var showError = function(error){
 	var errorElem = $('.templates .error').clone();
@@ -37,6 +24,7 @@ $(document).ready( function() {
 */
 
 // JSON object 
+/*
 var currentWeather = {
 	coord:{
 		lon:-0.13,
@@ -76,7 +64,40 @@ var currentWeather = {
 	name:"London",
 	cod:200
 };
-
+*/
+var windDirection = function (windDeg){
+	var windDirection;
+	if (windDeg === 0 || windDeg === 360){
+		windDirection = "N";
+	} else {
+		if (windDeg < 90 ) {
+			windDirection = "NE";
+		} else {
+			if (windDeg === 90){
+				windDirection = "E";
+			} else {
+				if (windDeg < 180){
+					windDirection = "SE";
+				} else {
+					if (windDeg === 180){
+						windDirection = "S";
+					} else {
+						if (windDeg < 270){
+							windDirection = "SW";
+						} else {
+							if (windDeg = 270){
+								windDirection = "W";
+							} else {
+								windDirection = "NW";
+							};
+						};
+					};
+				};
+			};
+		};
+	};
+	return windDirection;
+};
 
 var showCurrentWeather = function(weatherObj){
 	/*
@@ -97,11 +118,11 @@ var showCurrentWeather = function(weatherObj){
 
 	// Set the weather icon
 	var weatherIcon= currentWeatherHTML.find('.image');
-	weatherIcon.attr('src', "http://openweathermap.org/img/w/" + weatherObj.weather.icon + ".png");
+	weatherIcon.attr('src', "http://openweathermap.org/img/w/" + weatherObj.weather[0].icon + ".png");
 	
 	// Weather description
 	var main = currentWeatherHTML.find('.main');
-	main.text(weatherObj.weather.main);
+	main.text(weatherObj.weather[0].main);
 
 	var temperature = currentWeatherHTML.find('.temperature');
 	var tempFahr = Math.round(9/5 * (weatherObj.main.temp - 273) + 32);
@@ -113,7 +134,10 @@ var showCurrentWeather = function(weatherObj){
 	humidity.text(weatherObj.main.humidity);
 
 	var windSpeed = currentWeatherHTML.find('.wind-speed');
-	windSpeed.text(Math.round(2.237 * weatherObj.wind.speed) + " mph");
+	var windDeg = weatherObj.wind.deg;
+	
+	var direction = windDirection(windDeg);
+	windSpeed.text(direction + "  " + 	Math.round(2.237 * weatherObj.wind.speed) + " mph");
 
 	var pressure = currentWeatherHTML.find('.pressure');
 	pressure.text(weatherObj.main.pressure);
@@ -121,72 +145,34 @@ var showCurrentWeather = function(weatherObj){
 	var cloudiness = currentWeatherHTML.find('.cloudiness');
 	cloudiness.text(weatherObj.clouds.all);
 
-	/*questionElem.text(question.title);
-
-	// set the date asked property in result
-	var asked = result.find('.asked-date');
-	var date = new Date(1000*question.creation_date);
-	asked.text(date.toString());
-
-	// set the #views for question property in result
-	var viewed = result.find('.viewed');
-	viewed.text(question.view_count);
-
-	// set some properties related to asker
-	var asker = result.find('.asker');
-	asker.html('<p>Name: <a target="_blank" href=http://stackoverflow.com/users/' + question.owner.user_id + ' >' +
-													question.owner.display_name +
-												'</a>' +
-							'</p>' +
- 							'<p>Reputation: ' + question.owner.reputation + '</p>'
-	);
-	*/
 	return currentWeatherHTML;
-
 
 };
 
 
 // find the current weather
 var getCurrentWeather = function(city){
-
-		$('.results').append(showCurrentWeather(currentWeather));
-
-/*
-	var request = {page: '1',
-					pagesize: '100',
-								site: 'stackoverflow'
-								};
+	
 	var result = $.ajax({
-		url: "http://api.stackexchange.com/2.2/tags/" + tags + "/top-answerers/all_time",
-		data: request,
-		dataType: "jsonp",
-		type: "GET",
-		})
+		url: "http://api.openweathermap.org/data/2.5/weather?q=" + city ,
+		type: "GET"
+	})
 
 	.done(function(result){
-		var searchResults = showSearchResults(tags, result.items.length);
-
-		$('.search-results').html(searchResults);
-
-		$.each(result.items, function(i, item) {
-			var tag_score = showTagScore(item);
-			$('.results').append(tag_score);
-		});
+		var currentWeather = showCurrentWeather(result);
+		$('.results').append(currentWeather);
+		getHourlyWeather(city);
 	})
 
 	.fail(function(jqXHR, error, errorThrown){
 		var errorElem = showError(error);
-		$('.search-results').append(errorElem);
+		$('.results').append(errorElem);
 	});
-
-
-*/
 
 };
 
 // JSON object
-var hourlyWeather = {
+/*var hourlyWeather = {
 	"cod":"200",
 	"message":0.0045,
 	"city":{
@@ -264,14 +250,33 @@ var hourlyWeather = {
         }
     ]
 }
+*/
 
-var showHourlyWeather = function(weatherObj){
+var formatTime = function(weatherTime){
+	if (weatherTime > 23) {
+		weatherTime -= 23;
+	};
+	if (weatherTime < 12){
+		if (weatherTime === 0){
+			weatherTime = 12;
+		};
+		return weatherTime + " AM";
+	} else {
+		if (weatherTime > 12){
+			weatherTime -= 12;
+		}
+		return weatherTime + " PM";
+	};
+};
+
+var showHourlyWeather = function(weatherObj, weatherTime){
 
 	var hourlyColumn = $('.templates .hourly-column').clone();
 
 	// Set the time
 	var time = hourlyColumn.find('.time');
-	time.text(weatherObj.dt_txt.substring(11));
+	var timeText = formatTime(weatherTime);
+	time.text(timeText);
 
 	// Set the weather icon
 	var weatherIcon= hourlyColumn.find('.image');
@@ -294,18 +299,39 @@ var getHourlyWeather = function(city){
 /*
 api.openweathermap.org/data/2.5/forecast?q=London,us&mode=xml
 */
+
+	var result = $.ajax({
+		url: "http://api.openweathermap.org/data/2.5/forecast?q=" + city ,
+		type: "GET"
+	})
+
+	.done(function(result){
 		var hourlyHeader = $('.templates .hourly-header').clone();
 		$('.results').append(hourlyHeader);
 
-		$.each(hourlyWeather.list, function(i, item) {
-			var hourlyColumn = showHourlyWeather(item);
+		var weatherDate = new Date();
+		var weatherTime = weatherDate.getHours();
+		for (i = 0;i < 8; i++) {
+			item = result.list[i];
+			var hourlyColumn = showHourlyWeather(item,weatherTime);
 			$('.results .hourly-header .row').append(hourlyColumn);
-		});
+			weatherTime += 3;
+		};
 
+		getExtendedWeather(city);
+	})
+
+	.fail(function(jqXHR, error, errorThrown){
+		var errorElem = showError(error);
+		$('.results').append(errorElem);
+	});
+
+
+		
 };
 
-
-var extendedWeather = {
+// Json object
+/*var extendedWeather = {
 	cod:"200",
 	message:0.0032,
 	city:{
@@ -384,6 +410,10 @@ var extendedWeather = {
     	}
     ]
 }
+*/
+
+var dayName = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+var monthName = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
 
 var showExtendedWeather = function(weatherObj, weatherDate){
@@ -392,7 +422,10 @@ var showExtendedWeather = function(weatherObj, weatherDate){
 
 	// Set the day
 	var day = extendedColumn.find('.day');
-	day.text(weatherDate.toDateString());
+	day.text(dayName[weatherDate.getDay()]);
+
+	var date = extendedColumn.find('.date');
+	date.text(monthName[weatherDate.getMonth()] + " " + weatherDate.getDate());
 
 	// Set the weather icon
 	var weatherIcon= extendedColumn.find('.image');
@@ -418,34 +451,76 @@ var getExtendedWeather = function(city){
 /*
  api.openweathermap.org/data/2.5/forecast/daily?q=London&mode=xml&units=metric&cnt=7
 */
+	var result = $.ajax({
+		url: "http://api.openweathermap.org/data/2.5/forecast/daily?q=" + city ,
+		type: "GET"
+	})
 
+	.done(function(result){
 		var extendedHeader = $('.templates .extended-header').clone();
 		$('.results').append(extendedHeader);
 
 		var weatherDate = new Date();
-		$.each(extendedWeather.list, function(i, item) {
+		var weatherTime = weatherDate.getHours();
+		for (i = 0;i < 7; i++) {
+			item = result.list[i];
 			var extendedColumn = showExtendedWeather(item,weatherDate);
 			$('.results .extended-header .row').append(extendedColumn);
 			weatherDate.setDate(weatherDate.getDate() + 1);
-		});
+		};
+	})
+
+	.fail(function(jqXHR, error, errorThrown){
+		var errorElem = showError(error);
+		$('.results').append(errorElem);
+	});
 
 };
 
 var getCity = function(location){
-	return "Valparaiso";
+
+$.ajax({
+  url: "http://zip.elevenbasetwo.com/v2/US/" + location,
+  success: function( resp ) {
+    console.log(resp.city);
+    if (resp.city != ''){
+		getCurrentWeather(resp.city);
+	};
+  }
+});
+
+	
+	
 };
 
 // takes a zipcode/city 
 // to send to weathermap for results
 var getWeather = function(location) {
 
-	var city = getCity(location);
-
-	if (city != ''){
-		getCurrentWeather(city);
-		getHourlyWeather(city);
-		getExtendedWeather(city);
+	
+	if (location.length === 5 && $.isNumeric(location)) {
+		city =  getCity(location);
+	} else {
+		city = location;
+		if (city != ''){
+			getCurrentWeather(city);
+		};
 	};
+
+	
 	
 };
 	
+$(document).ready( function() {
+	$('.weather-getter').submit( function(event){
+
+		// zero out results if previous search has run
+		$('.results').html('');
+		// get the value of the location the user submitted
+		var location = $(this).find("input[name='location']").val();
+		getWeather(location);
+		$(this).find("input[name='location']").val('');
+	});
+	
+	getWeather("Chicago");
+});
